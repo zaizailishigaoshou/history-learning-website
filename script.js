@@ -1,16 +1,15 @@
-// 示例：点击按钮显示或隐藏某个部分
-document.addEventListener("DOMContentLoaded", () => {
-    const toggleButton = document.createElement("button");
-    toggleButton.innerText = "显示/隐藏中世纪历史";
-    document.body.appendChild(toggleButton);
+// 获取所有图片元素
+const images = document.querySelectorAll('.gallery-image');
 
-    const medievalSection = document.getElementById("medieval");
-
-    toggleButton.addEventListener("click", () => {
-        if (medievalSection.style.display === "none") {
-            medievalSection.style.display = "block";
+// 添加点击事件监听
+images.forEach(image => {
+    image.addEventListener('click', function () {
+        if (this.classList.contains('zoomed')) {
+            // 如果图片已经放大，点击后恢复原状
+            this.classList.remove('zoomed');
         } else {
-            medievalSection.style.display = "none";
+            // 如果图片没有放大，点击后放大并居中
+            this.classList.add('zoomed');
         }
     });
 });
