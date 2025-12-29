@@ -1,0 +1,875 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>课堂抽签问答系统</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.2/echarts.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+      .container { 
+            max-width: 1600px;  /* 加宽容器，适配布局 */
+            margin: 20px auto;
+            padding: 20px;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+      .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 15px;
+        }
+      .chart-box {
+            height: 500px;
+            margin: 30px 0;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 0 5px;
+            transition: all 0.3s;
+        }
+        button:hover { 
+            background-color: #45a049;
+            transform: translateY(-2px);
+        }
+        button.export-btn {
+            background-color: #2196F3;
+        }
+        button.export-btn:hover {
+            background-color: #0b7dda;
+        }
+        #selectedStudent { 
+            font-size: 28px;
+            color: #2c3e50;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #rollingNames {
+            font-size: 48px;
+            color: #e74c3c;
+            margin: 30px 0;
+            text-align: center;
+            font-weight: bold;
+            height: 80px;
+            line-height: 80px;
+        }
+       .control-panel {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+       .rolling-score-input {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .rolling-score-input input {
+            padding: 10px;
+            width: 120px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        /* 学生名单+得分+加减分框 三合一样式 */
+        .students-container {
+            margin: 40px 0;
+        }
+        .students-row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .student-item {
+            width: 10%; /* 每行10个 */
+            display: flex;
+            flex-direction: column;  /* 纵向排列：名字→得分→加减分框+按钮 */
+            align-items: center;
+            padding: 10px 5px;
+            box-sizing: border-box;
+            border: 1px solid #f0f0f0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background-color: #fafafa;
+        }
+        .student-name {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            text-align: center;
+        }
+        .student-score {
+            font-size: 16px;
+            color: #e74c3c;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .score-input {
+            width: 80px;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .add-score-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            width: 80px;
+        }
+        /* 提示框样式 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background-color: #27ae60;
+            color: white;
+            border-radius: 4px;
+            font-size: 16px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 9999;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        /* 扣分提示框样式（红色） */
+        .toast.minus {
+            background-color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>课堂随机抽签系统</h1>
+            <div>
+                <button onclick="startRolling()">开始滚动</button>
+                <button onclick="stopRolling()">停止滚动</button>
+                <button class="export-btn" onclick="exportToExcel()">导出Excel</button>
+                <button onclick="importData()">导入数据</button>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <div id="rollingNames"></div>
+            <div id="selectedStudent">请点击开始滚动进行抽签</div>
+
+            <div class="rolling-score-input">
+                <input type="number" id="rollingScoreInput" placeholder="抽签加减分" step="any">  <!-- 支持负值 -->
+                <button onclick="recordRollingScore()">确认</button>
+            </div>
+        </div>
+
+        <!-- 得分统计图表（移到学生名单之前） -->
+        <div class="data-display">
+            <h3>学生得分统计图表</h3>
+            <div class="chart-box" id="chart"></div>
+        </div>
+
+        <!-- 三合一核心区域：名字+得分+加减分框 -->
+        <div class="students-container">
+            <h3>学生名单（按拼音首字母排序，共54人）</h3>
+            <div id="studentsList">
+                <div class="students-row">
+            <div class="student-item">
+                <span class="student-name">陈栋梁</span>
+                <span class="student-score" data-name="陈栋梁">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="陈栋梁" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('陈栋梁')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">葛星蕾</span>
+                <span class="student-score" data-name="葛星蕾">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="葛星蕾" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('葛星蕾')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">韩悦</span>
+                <span class="student-score" data-name="韩悦">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="韩悦" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('韩悦')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">韩明</span>
+                <span class="student-score" data-name="韩明">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="韩明" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('韩明')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">韩梦洁</span>
+                <span class="student-score" data-name="韩梦洁">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="韩梦洁" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('韩梦洁')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">韩雯</span>
+                <span class="student-score" data-name="韩雯">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="韩雯" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('韩雯')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">李振琛</span>
+                <span class="student-score" data-name="李振琛">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="李振琛" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('李振琛')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">李嫣</span>
+                <span class="student-score" data-name="李嫣">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="李嫣" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('李嫣')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">李欢</span>
+                <span class="student-score" data-name="李欢">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="李欢" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('李欢')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">刘家浩</span>
+                <span class="student-score" data-name="刘家浩">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="刘家浩" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('刘家浩')">确认</button>
+            </div>
+        </div><div class="students-row">
+            <div class="student-item">
+                <span class="student-name">马小燕0</span>
+                <span class="student-score" data-name="马小燕0">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马小燕0" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马小燕0')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马海霞</span>
+                <span class="student-score" data-name="马海霞">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马海霞" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马海霞')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马青霞</span>
+                <span class="student-score" data-name="马青霞">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马青霞" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马青霞')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马小燕1</span>
+                <span class="student-score" data-name="马小燕1">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马小燕1" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马小燕1')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马馨</span>
+                <span class="student-score" data-name="马馨">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马馨" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马馨')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马青莲</span>
+                <span class="student-score" data-name="马青莲">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马青莲" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马青莲')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马超</span>
+                <span class="student-score" data-name="马超">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马超" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马超')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马燕</span>
+                <span class="student-score" data-name="马燕">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马燕" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马燕')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马雅宁</span>
+                <span class="student-score" data-name="马雅宁">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马雅宁" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马雅宁')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马春莹</span>
+                <span class="student-score" data-name="马春莹">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马春莹" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马春莹')">确认</button>
+            </div>
+        </div><div class="students-row">
+            <div class="student-item">
+                <span class="student-name">马小艳</span>
+                <span class="student-score" data-name="马小艳">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马小艳" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马小艳')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马艳玲</span>
+                <span class="student-score" data-name="马艳玲">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马艳玲" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马艳玲')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马春蓉</span>
+                <span class="student-score" data-name="马春蓉">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马春蓉" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马春蓉')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马倩</span>
+                <span class="student-score" data-name="马倩">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马倩" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马倩')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马海莉</span>
+                <span class="student-score" data-name="马海莉">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马海莉" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马海莉')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马晓军</span>
+                <span class="student-score" data-name="马晓军">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马晓军" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马晓军')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">马明龙</span>
+                <span class="student-score" data-name="马明龙">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="马明龙" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('马明龙')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">普俄卓玛</span>
+                <span class="student-score" data-name="普俄卓玛">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="普俄卓玛" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('普俄卓玛')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">漆浩薇</span>
+                <span class="student-score" data-name="漆浩薇">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="漆浩薇" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('漆浩薇')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">让赛多杰</span>
+                <span class="student-score" data-name="让赛多杰">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="让赛多杰" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('让赛多杰')">确认</button>
+            </div>
+        </div><div class="students-row">
+            <div class="student-item">
+                <span class="student-name">施胜豪</span>
+                <span class="student-score" data-name="施胜豪">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="施胜豪" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('施胜豪')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">桑杰端智</span>
+                <span class="student-score" data-name="桑杰端智">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="桑杰端智" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('桑杰端智')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">桑杰措</span>
+                <span class="student-score" data-name="桑杰措">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="桑杰措" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('桑杰措')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">陕玉蕊</span>
+                <span class="student-score" data-name="陕玉蕊">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="陕玉蕊" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('陕玉蕊')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">索南德吉</span>
+                <span class="student-score" data-name="索南德吉">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="索南德吉" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('索南德吉')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">王文博</span>
+                <span class="student-score" data-name="王文博">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="王文博" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('王文博')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">王馨甜</span>
+                <span class="student-score" data-name="王馨甜">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="王馨甜" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('王馨甜')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">完玛扎西</span>
+                <span class="student-score" data-name="完玛扎西">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="完玛扎西" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('完玛扎西')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">王杰</span>
+                <span class="student-score" data-name="王杰">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="王杰" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('王杰')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">夏吾扎西</span>
+                <span class="student-score" data-name="夏吾扎西">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="夏吾扎西" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('夏吾扎西')">确认</button>
+            </div>
+        </div><div class="students-row">
+            <div class="student-item">
+                <span class="student-name">英措旺姆</span>
+                <span class="student-score" data-name="英措旺姆">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="英措旺姆" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('英措旺姆')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">姚昕怡</span>
+                <span class="student-score" data-name="姚昕怡">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="姚昕怡" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('姚昕怡')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">叶喜多杰</span>
+                <span class="student-score" data-name="叶喜多杰">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="叶喜多杰" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('叶喜多杰')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">叶西卓玛</span>
+                <span class="student-score" data-name="叶西卓玛">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="叶西卓玛" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('叶西卓玛')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">央金拉姆</span>
+                <span class="student-score" data-name="央金拉姆">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="央金拉姆" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('央金拉姆')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">杨志勇</span>
+                <span class="student-score" data-name="杨志勇">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="杨志勇" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('杨志勇')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">张宇帆</span>
+                <span class="student-score" data-name="张宇帆">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="张宇帆" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('张宇帆')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">张子怡</span>
+                <span class="student-score" data-name="张子怡">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="张子怡" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('张子怡')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">张宇涵</span>
+                <span class="student-score" data-name="张宇涵">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="张宇涵" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('张宇涵')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">朱吉蓉</span>
+                <span class="student-score" data-name="朱吉蓉">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="朱吉蓉" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('朱吉蓉')">确认</button>
+            </div>
+        </div><div class="students-row">
+            <div class="student-item">
+                <span class="student-name">赵园园</span>
+                <span class="student-score" data-name="赵园园">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="赵园园" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('赵园园')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">赵玉莹</span>
+                <span class="student-score" data-name="赵玉莹">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="赵玉莹" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('赵玉莹')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">张婕</span>
+                <span class="student-score" data-name="张婕">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="张婕" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('张婕')">确认</button>
+            </div>
+        
+            <div class="student-item">
+                <span class="student-name">赵玉玲</span>
+                <span class="student-score" data-name="赵玉玲">0.00分</span>  <!-- 显示当前得分 -->
+                <input type="number" class="score-input" data-name="赵玉玲" 
+                       placeholder="加减分" step="any" value="">  <!-- 支持负值，移除min限制 -->
+                <button class="add-score-btn" onclick="updateScore('赵玉玲')">确认</button>
+            </div>
+        </div>  <!-- 静态插入三合一名单 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示框 -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+    // 学生名单（用于滚动和计分）
+    const students = ["陈栋梁", "葛星蕾", "韩悦", "韩明", "韩梦洁", "韩雯", "李振琛", "李嫣", "李欢", "刘家浩", "马小燕0", "马海霞", "马青霞", "马小燕1", "马馨", "马青莲", "马超", "马燕", "马雅宁", "马春莹", "马小艳", "马艳玲", "马春蓉", "马倩", "马海莉", "马晓军", "马明龙", "普俄卓玛", "漆浩薇", "让赛多杰", "施胜豪", "桑杰端智", "桑杰措", "陕玉蕊", "索南德吉", "王文博", "王馨甜", "完玛扎西", "王杰", "夏吾扎西", "英措旺姆", "姚昕怡", "叶喜多杰", "叶西卓玛", "央金拉姆", "杨志勇", "张宇帆", "张子怡", "张宇涵", "朱吉蓉", "赵园园", "赵玉莹", "张婕", "赵玉玲"];
+    const totalStudents = 54;
+
+    // 初始化存储系统（独立计分）
+    let scores = JSON.parse(localStorage.getItem('classScores') || '{}');
+    let currentStudent = "";
+    let rollingInterval;
+
+    // 初始化分数并更新显示
+    function initScores() {
+        students.forEach(name => {
+            if (scores[name] === undefined) {
+                scores[name] = 0;
+            }
+        });
+        localStorage.setItem('classScores', JSON.stringify(scores));
+        updateAllScoresDisplay();  // 初始化时显示所有学生得分
+    }
+
+    // 更新所有学生的得分显示（核心：实时刷新每个名字后的得分）
+    function updateAllScoresDisplay() {
+        students.forEach(name => {
+            const scoreElement = document.querySelector('.student-score[data-name="' + name + '"]');
+            if (scoreElement) {
+                scoreElement.textContent = scores[name].toFixed(2) + '分';
+                // 得分小于0时显示红色加深，突出扣分状态
+                scoreElement.style.color = scores[name] < 0 ? '#c0392b' : '#e74c3c';
+            }
+        });
+        updateChart();  // 同步更新图表
+    }
+
+    // 单个学生加减分（点击"确认"触发，支持负值）
+    function updateScore(name) {
+        const input = document.querySelector('.score-input[data-name="' + name + '"]');
+        const changeValue = parseFloat(input.value);
+
+        if (isNaN(changeValue)) {
+            alert("请输入有效的数值（支持正负）！");
+            return;
+        }
+
+        scores[name] += changeValue;
+        localStorage.setItem('classScores', JSON.stringify(scores));
+        updateAllScoresDisplay();  // 加减分后实时更新得分
+        input.value = '';  // 清空输入框
+
+        // 区分加分/扣分提示，不同颜色
+        const toast = document.getElementById('toast');
+        if (changeValue > 0) {
+            toast.textContent = name + ' 成功加分' + changeValue.toFixed(2) + '分，当前总分：' + scores[name].toFixed(2) + '分';
+            toast.className = 'toast show';
+        } else if (changeValue < 0) {
+            toast.textContent = name + ' 成功扣分' + Math.abs(changeValue).toFixed(2) + '分，当前总分：' + scores[name].toFixed(2) + '分';
+            toast.className = 'toast show minus';
+        } else {
+            toast.textContent = '未进行加减分操作';
+            toast.className = 'toast show';
+        }
+
+        setTimeout(() => {
+            toast.className = 'toast';
+        }, 2000);
+    }
+
+    // 开始滚动名字
+    function startRolling() {
+        if (rollingInterval) clearInterval(rollingInterval);
+        rollingInterval = setInterval(() => {
+            const randomIndex = Math.floor(Math.random() * students.length);
+            document.getElementById('rollingNames').textContent = students[randomIndex];
+        }, 80);
+    }
+
+    // 停止滚动名字
+    function stopRolling() {
+        clearInterval(rollingInterval);
+        currentStudent = document.getElementById('rollingNames').textContent || students[0];
+        document.getElementById('selectedStudent').innerHTML = 
+            '当前选中：' + currentStudent + '（当前得分：' + scores[currentStudent].toFixed(2) + '分）';
+        document.getElementById('rollingScoreInput').value = '';
+    }
+
+    // 抽签加减分（停止滚动后触发，支持负值）
+    function recordRollingScore() {
+        if (!currentStudent) {
+            alert("请先停止滚动选择学生！");
+            return;
+        }
+
+        const changeValue = parseFloat(document.getElementById('rollingScoreInput').value);
+        if (isNaN(changeValue)) {
+            alert("请输入有效的数值（支持正负）！");
+            return;
+        }
+
+        scores[currentStudent] += changeValue;
+        localStorage.setItem('classScores', JSON.stringify(scores));
+        updateAllScoresDisplay();  // 实时更新得分
+        document.getElementById('rollingScoreInput').value = '';
+
+        // 区分加分/扣分提示
+        const toast = document.getElementById('toast');
+        if (changeValue > 0) {
+            toast.textContent = '已为' + currentStudent + ' 加分' + changeValue.toFixed(2) + '分';
+            toast.className = 'toast show';
+        } else if (changeValue < 0) {
+            toast.textContent = '已为' + currentStudent + ' 扣分' + Math.abs(changeValue).toFixed(2) + '分';
+            toast.className = 'toast show minus';
+        } else {
+            toast.textContent = '未进行加减分操作';
+            toast.className = 'toast show';
+        }
+
+        setTimeout(() => {
+            toast.className = 'toast';
+        }, 2000);
+    }
+
+    // 更新得分图表
+    function updateChart() {
+        const chart = echarts.init(document.getElementById('chart'));
+        chart.setOption({
+            title: { text: '学生得分统计（支持正负分）' },
+            tooltip: { trigger: 'axis', formatter: '{b}: {c}分' },
+            xAxis: {
+                type: 'category',
+                data: students,
+                axisLabel: { rotate: 45, interval: 0, fontSize: 11 }
+            },
+            yAxis: { 
+                type: 'value', 
+                name: '得分',
+                // 确保y轴包含负值区域，扣分时图表正常显示
+                min: Math.min(...Object.values(scores), 0) - 1,  // 最低值向下偏移1，避免数据贴边
+                max: Math.max(...Object.values(scores), 0) + 1   // 最高值向上偏移1，避免数据贴边
+            },
+            series: [{
+                type: 'bar',
+                data: students.map(name => scores[name]),
+                itemStyle: {
+                    // 加分（正值）绿色渐变，扣分（负值）红色渐变
+                    color: function(params) {
+                        const value = params.value;
+                        return value >= 0 
+                            ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#5470c6' },
+                                { offset: 1, color: '#91cc75' }
+                            ])
+                            : new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#e74c3c' },
+                                { offset: 1, color: '#c0392b' }
+                            ]);
+                    }
+                },
+                label: { 
+                    show: true, 
+                    position: 'top', 
+                    fontSize: 10, 
+                    formatter: '{c}',
+                    color: function(params) {
+                        return params.value < 0 ? '#c0392b' : '#333';
+                    }
+                }
+            }]
+        });
+        window.addEventListener('resize', () => chart.resize());
+    }
+
+    // 导出Excel（包含姓名和当前得分）
+    function exportToExcel() {
+        const excelData = students.map(name => [name, scores[name].toFixed(2) + '分']);
+        excelData.unshift(['学生姓名', '当前得分']);
+
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+        worksheet['!cols'] = [{wch: 15}, {wch: 12}];  // 列宽调整
+        XLSX.utils.book_append_sheet(workbook, worksheet, '学生得分表');
+
+        const today = new Date().toLocaleDateString().replace(/\//g, '-');
+        XLSX.writeFile(workbook, '学生得分表_' + today + '.xlsx');
+
+        const toast = document.getElementById('toast');
+        toast.textContent = 'Excel导出成功！';
+        toast.className = 'toast show';
+        setTimeout(() => {
+            toast.className = 'toast';
+        }, 2000);
+    }
+
+    // 导入数据
+    function importData() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,.xlsx,.xls';
+
+        input.onchange = e => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = event => {
+                try {
+                    if (file.name.endsWith('.json')) {
+                        Object.assign(scores, JSON.parse(event.target.result));
+                    } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                        const data = new Uint8Array(event.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const excelData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                        for (let i = 1; i < excelData.length; i++) {
+                            const [name, scoreStr] = excelData[i];
+                            if (name && scoreStr) {
+                                const score = parseFloat(scoreStr.replace('分', ''));
+                                if (!isNaN(score)) scores[name] = score;
+                            }
+                        }
+                    }
+                    localStorage.setItem('classScores', JSON.stringify(scores));
+                    updateAllScoresDisplay();
+
+                    const toast = document.getElementById('toast');
+                    toast.textContent = '数据导入成功！';
+                    toast.className = 'toast show';
+                    setTimeout(() => {
+                        toast.className = 'toast';
+                    }, 2000);
+                } catch (err) {
+                    alert('文件格式错误！请导入正确的JSON或Excel文件');
+                }
+            };
+            file.name.endsWith('.json') ? reader.readAsText(file) : reader.readAsArrayBuffer(file);
+        };
+        input.click();
+    }
+
+    // 初始化（核心入口）
+    initScores();
+    </script>
+</body>
+</html>

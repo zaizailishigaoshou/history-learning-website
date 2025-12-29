@@ -1,0 +1,130 @@
+/* 通用样式 */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+  
+  header {
+    text-align: center;
+    position: relative;
+  }
+  
+  h1 {
+    margin-top: 60px;
+  }
+  
+  .content {
+    padding: 20px;
+    margin-top: 100px;
+  }
+  
+  /* 文章和图表 */
+  h2 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+  }
+  
+  #article1,
+  #chart1 {
+    margin-bottom: 20px;
+  }
+  
+  /* 图片居中 */
+  .chart {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  
+  .chart img {
+    max-width: 150px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  
+  /* 链接样式 */
+  .links {
+    text-align: center;
+    margin-top: 20px;
+  }
+  
+  .link-button {
+    display: inline-block;
+    margin: 0 10px;
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+  }
+  
+  .link-button:hover {
+    background-color: #45a049;
+  }
+  
+  .exit-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+  }
+  
+  .exit-button:hover {
+    background-color: #45a049;
+  }
+  
+  /* 图片放大弹窗 */
+  .image-popup {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    justify-content: center;
+    align-items: center;
+    z-index: 1001;
+  }
+  
+  #popup-image {
+    max-width: 90%;
+    max-height: 80%;
+    margin: 0 auto;
+  }
+  
+  .close-popup {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: white;
+    font-size: 30px;
+    cursor: pointer;
+  }
+  
+  .nav-button {
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .prev-button {
+    left: 10px;
+    position: absolute;
+  }
+  
+  .next-button {
+    right: 10px;
+    position: absolute;
+  }

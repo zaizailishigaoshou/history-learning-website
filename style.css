@@ -1,0 +1,63 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    text-align: center;
+}
+
+h1 {
+    margin-bottom: 30px;
+}
+
+.image-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    justify-items: center;
+    align-items: center;
+}
+
+.gallery-image {
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.gallery-image:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+}
+
+/* 放大后的样式 */
+.zoomed {
+    transform: scale(1.5); /* 放大 1.5 倍 */
+    z-index: 999;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1.5); /* 居中并放大 */
+    max-width: 90vw;  /* 最大宽度设置为 90% 的屏幕宽度 */
+    max-height: 90vh; /* 最大高度设置为 90% 的屏幕高度 */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    background-color: #fff;
+    border-radius: 8px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .gallery-image {
+        max-width: 150px;
+    }
+}
