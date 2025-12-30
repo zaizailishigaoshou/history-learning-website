@@ -1,6 +1,6 @@
-// 等待DOM完全加载后执行所有逻辑，避免元素未加载
+// 等待DOM完全加载，避免元素未获取
 document.addEventListener('DOMContentLoaded', function() {
-  // ========== 原有图片弹窗功能（完整保留，无修改） ==========
+  // ========== 原有图片弹窗功能（完整保留，图片点击正常放大/切换） ==========
   const lessonContent = document.getElementById('lesson-content');
   const imagePopup = document.getElementById('image-popup');
   const popupImage = document.getElementById('popup-image');
@@ -11,10 +11,11 @@ document.addEventListener('DOMContentLoaded', function() {
   let imageElements = [];
   let currentImageIndex = 0;
 
-  // 初始化图片弹窗
+  // 图片点击绑定弹窗
   if (lessonContent) {
     imageElements = Array.from(lessonContent.querySelectorAll('img'));
     imageElements.forEach((img, index) => {
+      // 仅图片触发弹窗，文字不触发
       img.addEventListener('click', function() {
         currentImageIndex = index;
         popupImage.src = this.src;
@@ -37,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // 上一张/下一张图片
+  // 上一张/下一张图片切换
   if (prevButton) {
     prevButton.addEventListener('click', function() {
       currentImageIndex = (currentImageIndex - 1 + imageElements.length) % imageElements.length;
@@ -51,21 +52,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ========== 点名跳转功能（强化版，双重校验） ==========
-  // 1. 强制获取元素，打印日志便于排查
+  // ========== 点名文字跳转（仅文字点击触发，精准匹配需求） ==========
   const rollcallText = document.getElementById('rollcall-text');
-  console.log('点名元素是否获取到：', rollcallText); // 打开F12控制台可查看是否获取成功
-
-  // 2. 双重判断，确保事件绑定成功
-  if (rollcallText && typeof rollcallText.addEventListener === 'function') {
+  // 确保元素获取成功
+  if (rollcallText) {
     rollcallText.addEventListener('click', function() {
-      console.log('点名文字被点击了，开始跳转...'); // 点击后可在控制台查看是否触发
-      // 强制跳转，兼容所有浏览器
+      // 仅点击“点名”文字时，跳转到点名.html
       window.location.href = '点名.html';
-      // 若想强制在当前窗口跳转，可追加：
-      // window.location.replace('点名.html');
+      // 若需新窗口打开，替换为：window.open('点名.html', '_blank');
     });
-  } else {
-    console.error('未获取到点名元素，或元素不支持事件绑定！');
   }
 });
