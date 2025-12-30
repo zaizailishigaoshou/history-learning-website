@@ -10,16 +10,21 @@
       display: inline-block;
       margin-right: 20px;
       text-align: center;
+      position: relative;
     }
     .rollcall-text {
-      display: block;
+      display: block; /* 固定在图片下方 */
       margin-top: 5px;
       color: #333;
-      cursor: pointer;
       font-size: 14px;
+      cursor: pointer; /* 手型提示 */
     }
     .rollcall-text:hover {
       color: #0066cc;
+    }
+    .image-item img {
+      display: block;
+      margin: 0 auto;
     }
   </style>
 </head>
@@ -36,6 +41,7 @@
       </div>
       <div class="image-item">
         <img src="images/4/20/2.png" alt="历史图片 2">
+        <!-- 点名文字：独立元素，ID唯一，确保JS精准获取 -->
         <span class="rollcall-text" id="rollcall-text">点名</span>
       </div>
     </div>
