@@ -6,25 +6,21 @@
   <title>复习资料</title>
   <link rel="stylesheet" href="style.css">
   <style>
+    /* 极简样式：确保点名文字在图片下方，点击区域最大化 */
     .image-item {
       display: inline-block;
       margin-right: 20px;
       text-align: center;
-      position: relative;
     }
-    .rollcall-text {
-      display: block; /* 固定在图片下方 */
-      margin-top: 5px;
-      color: #333;
-      font-size: 14px;
-      cursor: pointer; /* 手型提示 */
-    }
-    .rollcall-text:hover {
-      color: #0066cc;
-    }
-    .image-item img {
-      display: block;
-      margin: 0 auto;
+    /* 点名文字样式：加大点击区域，确保易点击 */
+    .rollcall-link {
+      display: block; /* 整行可点，不局限于文字本身 */
+      margin-top: 8px; /* 与图片拉开距离，避免误点图片 */
+      color: #0066cc; /* 醒目颜色，方便识别可点击 */
+      font-size: 16px; /* 放大文字，更容易点中 */
+      cursor: pointer; /* 明确手型提示 */
+      text-decoration: none; /* 去除下划线 */
+      padding: 2px 10px; /* 增加内边距，扩大点击范围 */
     }
   </style>
 </head>
@@ -36,19 +32,22 @@
   <div class="images-container">
     <p>欢迎阅读本课的相关内容，以下展示了课本笔记以及相关的文章或图表。</p>
     <div id="lesson-content" class="chart">
+      <!-- 原有1.png：保留弹窗功能 -->
       <div class="image-item">
         <img src="images/4/20/1.png" alt="历史图片 1">
       </div>
+      <!-- 2.png + 点名文字：点击区域最大化，必触发跳转 -->
       <div class="image-item">
         <img src="images/4/20/2.png" alt="历史图片 2">
-        <!-- 点名文字：独立元素，ID唯一，确保JS精准获取 -->
-        <span class="rollcall-text" id="rollcall-text">点名</span>
+        <!-- 核心：a标签直接作为点名文字，无嵌套，点击区域拉满 -->
+        <a href="点名.html" class="rollcall-link">点名</a>
       </div>
     </div>
     <div class="links">
       <a href="recite.pdf" class="link-button">背诵资料</a>
     </div>
   </div>
+  <!-- 原有图片弹窗：完整保留 -->
   <div class="image-popup" id="image-popup">
     <span class="close-popup" id="close-popup">×</span>
     <img id="popup-image" src="" alt="放大图片">
