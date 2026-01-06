@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能朗读激励系统</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Microsoft YaHei', sans-serif; }
+        body { 
+            background: linear-gradient(135deg, 
+                #e0f2fe 0%, 
+                #fef3c7 25%, 
+                #dcfce7 50%, 
+                #fce7f3 75%, 
+                #ede9fe 100%
+            ); 
+            min-height: 100vh; 
+            padding: 20px; 
+            position: relative; 
+            overflow-x: hidden;
+        }
+
+        .floating-reward {
+            position: absolute;
+            font-size: 2.5rem;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0;
+            animation: rewardFloat 2s forwards;
+        }
+
+        @keyframes rewardFloat {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            20% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(-150px) scale(0.5); opacity: 0; }
+        }
+
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background: rgba(255, 255, 255, 0.95); 
+            border-radius: 25px; 
+            padding: 30px; 
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15); 
+            position: relative; 
+            z-index: 2;
+            border: 8px solid linear-gradient(90deg, #f59e0b, #ef4444, #8b5cf6, #10b981);
+        }
+
+        header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            padding-bottom: 20px; 
+            border-bottom: 4px dashed #f59e0b;
+            background: linear-gradient(90deg, #f59e0b, #ef4444, #8b5cf6, #10b981);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        h1 { 
+            font-size: 3.5rem; 
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            animation: titleGlow 3s infinite alternate;
+        }
+
+        @keyframes titleGlow {
+            from { text-shadow: 0 0 15px rgba(245, 158, 11, 0.5); }
+            to { text-shadow: 0 0 25px rgba(16, 185, 129, 0.7); }
+        }
+
+        .classroom-layout { 
+            display: grid; 
+            grid-template-columns: 1fr 2fr 1fr; 
+            gap: 25px; 
+            margin-bottom: 30px; 
+        }
+
+        @media (max-width: 1200px) { 
+            .classroom-layout { grid-template-columns: 1fr; } 
+        }
+
+        .learning-station { 
+            background: linear-gradient(145deg, #ffffff, #f8fafc); 
+            border-radius: 20px; 
+            padding: 25px; 
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            border: 4px solid;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .learning-station::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #f59e0b, #ef4444, #8b5cf6, #10b981);
+        }
+
+        .students-station { border-color: #3b82f6; }
+        .reading-station { border-color: #10b981; }
+        .achievement-station { border-color: #f59e0b; }
+
+        .student-card { 
+            display: flex; 
+            align-items: center; 
+            padding: 18px; 
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9); 
+            border-radius: 15px; 
+            margin-bottom: 15px; 
+            cursor: pointer; 
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            border: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .student-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transform: rotate(45deg);
+            transition: transform 0.6s;
+        }
+
+        .student-card:hover::after {
+            transform: rotate(45deg) translate(50%, 50%);
+        }
+
+        .student-card:hover { 
+            transform: translateY(-8px) scale(1.03); 
+            box-shadow: 0 15px 30px rgba(59, 130, 246, 0.15);
+        }
+
+        .student-card.active { 
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe); 
+            border-color: #3b82f6;
+            animation: studentActive 2s infinite;
+        }
+
+        @keyframes studentActive {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3); }
+            50% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+        }
+
+        .student-avatar { 
+            font-size: 3.2rem; 
+            margin-right: 20px; 
+            width: 85px; 
+            height: 85px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: white; 
+            border-radius: 50%; 
+            border: 5px solid;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+            transition: all 0.5s;
+        }
+
+        .student-card:hover .student-avatar {
+            transform: rotate(360deg) scale(1.1);
+        }
+
+        .student-1 { border-color: #ef4444; }
+        .student-2 { border-color: #3b82f6; }
+        .student-3 { border-color: #10b981; }
+        .student-4 { border-color: #8b5cf6; }
+
+        /* 智能朗读气泡 */
+        .smart-bubble-area {
+            position: relative;
+            height: 500px;
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 6px solid #10b981;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .reading-bubble {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle at 30% 30%, #60a5fa, #3b82f6);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 
+                inset 0 -25px 50px rgba(0, 0, 0, 0.25),
+                inset 0 25px 50px rgba(255, 255, 255, 0.4),
+                0 0 100px rgba(59, 130, 246, 0.6);
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .bubble-emoji {
+            font-size: 5rem;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+            transition: all 0.3s;
+        }
+
+        .bubble-motivation {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.25);
+            padding: 8px 20px;
+            border-radius: 25px;
+            max-width: 180px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        /* 能量光环 */
+        .energy-halo {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 5px solid rgba(255, 255, 255, 0.6);
+            animation: energyPulse 2s infinite;
+            z-index: 5;
+        }
+
+        @keyframes energyPulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.3); opacity: 0.4; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+
+        /* 分数里程碑 */
+        .milestone-indicator {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-weight: bold;
+            z-index: 20;
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+
+        /* 控制面板 */
+        .reading-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .reading-btn {
+            padding: 25px;
+            border: none;
+            border-radius: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            transition: all 0.4s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .reading-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transform: rotate(45deg);
+            transition: transform 0.6s;
+        }
+
+        .reading-btn:hover::after {
+            transform: rotate(45deg) translate(50%, 50%);
+        }
+
+        .reading-btn:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .start-reading { 
+            background: linear-gradient(135deg, #10b981, #059669); 
+        }
+
+        .stop-reading { 
+            background: linear-gradient(135deg, #ef4444, #dc2626); 
+        }
+
+        .reset-scores { 
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed); 
+        }
+
+        /* 分数显示 */
+        .score-celebration {
+            text-align: center;
+            margin: 25px 0;
+            padding: 25px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border-radius: 20px;
+            color: #78350f;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .current-score {
+            font-size: 4.5rem;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.2);
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+
+        .score-label {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .next-milestone {
+            font-size: 1.1rem;
+            background: rgba(255, 255, 255, 0.3);
+            padding: 8px 15px;
+            border-radius: 15px;
+            display: inline-block;
+        }
+
+        /* 里程碑进度 */
+        .milestone-tracker {
+            margin: 20px 0;
+        }
+
+        .milestone-bar {
+            height: 30px;
+            background: #e5e7eb;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .milestone-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #3b82f6, #8b5cf6, #ef4444);
+            border-radius: 15px;
+            transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .milestone-markers {
+            position: relative;
+            height: 40px;
+            margin-top: 10px;
+        }
+
+        .milestone-marker {
+            position: absolute;
+            width: 2px;
+            height: 20px;
+            background: #9ca3af;
+            transform: translateX(-50%);
+        }
+
+        .milestone-label {
+            position: absolute;
+            top: 25px;
+            transform: translateX(-50%);
+            font-size: 0.9rem;
+            color: #6b7280;
+            font-weight: bold;
+        }
+
+        /* 激励反馈 */
+        .encouragement-feed {
+            margin-top: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            border-radius: 20px;
+            border-left: 8px solid #3b82f6;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .encouragement-message {
+            font-size: 1.7rem;
+            text-align: center;
+            color: #1e40af;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+        }
+
+        /* 表情动画 */
+        .emoji-celebration {
+            animation: emojiCelebrate 0.8s;
+        }
+
+        @keyframes emojiCelebrate {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.5) rotate(-15deg); }
+            50% { transform: scale(1.8) rotate(15deg); }
+            75% { transform: scale(1.5) rotate(-10deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        .score-jump {
+            animation: scoreJump 0.5s;
+        }
+
+        @keyframes scoreJump {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        /* 里程碑庆祝 */
+        .milestone-celebration {
+            position: fixed;
+            font-size: 4rem;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0;
+            animation: milestoneFloat 3s forwards;
+        }
+
+        @keyframes milestoneFloat {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            10% { transform: translateY(-20px) scale(1.5); opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-300px) scale(0.3); opacity: 0; }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .classroom-layout { grid-template-columns: 1fr; }
+            .reading-controls { grid-template-columns: 1fr; }
+            h1 { font-size: 2.5rem; }
+        }
+
+        /* 特殊效果 */
+        .confetti-burst {
+            position: fixed;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        /* 分数等级颜色 */
+        .level-0 { color: #6b7280; }
+        .level-100 { color: #3b82f6; }
+        .level-200 { color: #10b981; }
+        .level-300 { color: #f59e0b; }
+        .level-400 { color: #ef4444; }
+        .level-500 { color: #8b5cf6; }
+        .level-600 { color: #ec4899; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-graduation-cap"></i> 智能朗读激励系统</h1>
+            <p style="font-size: 1.5rem; color: #4b5563; margin-top: 15px; font-weight: bold;">
+                三百分以上，每满一百分都有特别奖励！💯
+            </p>
+        </header>
+
+        <div class="classroom-layout">
+            <!-- 左侧：学生列表 -->
+            <div>
+                <div class="learning-station students-station">
+                    <h2 style="color: #3b82f6; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-user-graduate fa-beat"></i> 朗读小能手
+                    </h2>
+                    <div id="students-list">
+                        <div class="student-card active" onclick="selectStudent(0)">
+                            <div class="student-avatar student-1">🧑‍🎓</div>
+                            <div>
+                                <h3 class="level-0" id="studentName1">朗读之星</h3>
+                                <p>当前分数: <span id="score1" style="font-weight: bold; font-size: 1.2rem;">0</span></p>
+                                <p style="color: #ef4444; font-size: 0.9rem;" id="studentStatus1">准备开始朗读...</p>
+                            </div>
+                        </div>
+                        <div class="student-card" onclick="selectStudent(1)">
+                            <div class="student-avatar student-2">👩‍🎓</div>
+                            <div>
+                                <h3 class="level-0" id="studentName2">语音达人</h3>
+                                <p>当前分数: <span id="score2" style="font-weight: bold; font-size: 1.2rem;">0</span></p>
+                                <p style="color: #3b82f6; font-size: 0.9rem;" id="studentStatus2">等待轮次...</p>
+                            </div>
+                        </div>
+                        <div class="student-card" onclick="selectStudent(2)">
+                            <div class="student-avatar student-3">👨‍🎓</div>
+                            <div>
+                                <h3 class="level-0" id="studentName3">发音高手</h3>
+                                <p>当前分数: <span id="score3" style="font-weight: bold; font-size: 1.2rem;">0</span></p>
+                                <p style="color: #10b981; font-size: 0.9rem;" id="studentStatus3">摩拳擦掌...</p>
+                            </div>
+                        </div>
+                        <div class="student-card" onclick="selectStudent(3)">
+                            <div class="student-avatar student-4">👩‍🎓</div>
+                            <div>
+                                <h3 class="level-0" id="studentName4">朗读大师</h3>
+                                <p>当前分数: <span id="score4" style="font-weight: bold; font-size: 1.2rem;">0</span></p>
+                                <p style="color: #8b5cf6; font-size: 0.9rem;" id="studentStatus4">跃跃欲试...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="learning-station" style="margin-top: 25px; border-color: #ec4899;">
+                    <h2 style="color: #ec4899; margin-bottom: 20px;">
+                        <i class="fas fa-medal"></i> 里程碑说明
+                    </h2>
+                    <div style="padding: 15px; background: #fdf2f8; border-radius: 15px;">
+                        <div style="margin-bottom: 15px;">
+                            <h4 style="color: #be185d;">🎯 300分里程碑规则</h4>
+                            <p style="color: #6b7280; font-size: 0.95rem; line-height: 1.5;">
+                                从300分开始，每满100分自动触发特别庆祝！<br>
+                                <strong>300分</strong>：热烈掌声 👏<br>
+                                <strong>400分</strong>：欢呼喝彩 🎉<br>
+                                <strong>500分</strong>：胜利烟花 🎆<br>
+                                <strong>600分</strong>：全屏庆祝 🏆
+                            </p>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <h4 style="color: #7c3aed;">🌟 表情激励系统</h4>
+                            <p style="color: #6b7280; font-size: 0.95rem; line-height: 1.5;">
+                                根据朗读表现，气泡表情会变化：<br>
+                                • 声音洪亮 → 表情开心 😊<br>
+                                • 发音标准 → 表情兴奋 😄<br>
+                                • 持续优秀 → 表情惊喜 🤩
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间：朗读区 -->
+            <div>
+                <div class="learning-station reading-station">
+                    <h2 style="color: #10b981; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-volume-up fa-shake"></i> 智能朗读气泡
+                    </h2>
+
+                    <div class="smart-bubble-area">
+                        <div class="reading-bubble" id="readingBubble">
+                            <div class="bubble-emoji" id="bubbleEmoji">🎤</div>
+                            <div class="bubble-motivation" id="bubbleMotivation">准备开始朗读</div>
+                        </div>
+                        <div class="energy-halo" id="energyHalo"></div>
+                        <div class="milestone-indicator" id="milestoneIndicator">
+                            <i class="fas fa-trophy"></i> 里程碑达成: <span id="milestoneText">0分</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 30px;">
+                        <div class="milestone-tracker">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span style="font-weight: bold; color: #374151;">
+                                    <i class="fas fa-chart-line"></i> 里程碑进度
+                                </span>
+                                <span style="font-weight: bold;" id="currentMilestone">0/600分</span>
+                            </div>
+                            <div class="milestone-bar">
+                                <div class="milestone-fill" id="milestoneFill" style="width: 0%"></div>
+                            </div>
+                            <div class="milestone-markers" id="milestoneMarkers">
+                                <!-- 里程碑标记由JS动态生成 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="learning-station" style="margin-top: 25px; border-color: #f59e0b;">
+                    <h2 style="color: #f59e0b; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-play-circle fa-bounce"></i> 朗读控制
+                    </h2>
+
+                    <div class="reading-controls">
+                        <button class="reading-btn start-reading" id="startReading" onclick="startReading()">
+                            <i class="fas fa-microphone-alt fa-3x"></i>
+                            <span>开始朗读</span>
+                        </button>
+                        <button class="reading-btn stop-reading" id="stopReading" onclick="stopReading()" disabled>
+                            <i class="fas fa-stop-circle fa-3x"></i>
+                            <span>停止朗读</span>
+                        </button>
+                        <button class="reading-btn reset-scores" onclick="resetAllScores()">
+                            <i class="fas fa-redo-alt fa-3x"></i>
+                            <span>分数归零</span>
+                        </button>
+                    </div>
+
+                    <div class="score-celebration">
+                        <div class="current-score" id="currentScore">0</div>
+                        <div class="score-label">当前朗读得分</div>
+                        <div class="next-milestone" id="nextMilestone">
+                            下一个里程碑: <span style="font-weight: bold;">300分</span>
+                        </div>
+                    </div>
+
+                    <div class="encouragement-feed" id="encouragementFeed">
+                        <div class="encouragement-message" id="encouragementMessage">
+                            <i class="fas fa-comment-alt"></i> 加油！读得越洪亮，分数涨得越快！
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：成就区 -->
+            <div>
+                <div class="learning-station achievement-station">
+                    <h2 style="color: #f59e0b; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-trophy fa-spin"></i> 成就殿堂
+                    </h2>
+
+                    <div style="text-align: center; margin: 25px 0;">
+                        <div style="padding: 25px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 20px; color: white;">
+                            <div style="font-size: 2.8rem; font-weight: bold;" id="totalScore">0</div>
+                            <div style="font-size: 1.2rem;">班级总得分</div>
+                            <div style="margin-top: 15px; font-size: 0.9rem; opacity: 0.9;">
+                                <i class="fas fa-users"></i> 四名学生总分
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin: 25px 0;">
+                        <h3 style="color: #7c3aed; margin-bottom: 15px;">
+                            <i class="fas fa-crown"></i> 里程碑成就
+                        </h3>
+                        <div style="background: #f5f3ff; padding: 20px; border-radius: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                <div>
+                                    <span style="font-weight: bold; color: #f59e0b;">300分成就</span>
+                                    <div style="font-size: 0.9rem; color: #6b7280;">热烈掌声鼓励</div>
+                                </div>
+                                <div id="milestone300" style="opacity: 0.3;">
+                                    <i class="fas fa-hands-clapping fa-2x"></i>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                <div>
+                                    <span style="font-weight: bold; color: #ef4444;">400分成就</span>
+                                    <div style="font-size: 0.9rem; color: #6b7280;">全场欢呼喝彩</div>
+                                </div>
+                                <div id="milestone400" style="opacity: 0.3;">
+                                    <i class="fas fa-people-cheer fa-2x"></i>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                <div>
+                                    <span style="font-weight: bold; color: #8b5cf6;">500分成就</span>
+                                    <div style="font-size: 0.9rem; color: #6b7280;">烟花庆典绽放</div>
+                                </div>
+                                <div id="milestone500" style="opacity: 0.3;">
+                                    <i class="fas fa-fireworks fa-2x"></i>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <div>
+                                    <span style="font-weight: bold; color: #ec4899;">600分成就</span>
+                                    <div style="font-size: 0.9rem; color: #6b7280;">全屏庆祝盛典</div>
+                                </div>
+                                <div id="milestone600" style="opacity: 0.3;">
+                                    <i class="fas fa-award fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 25px;">
+                        <h3 style="color: #059669; margin-bottom: 15px;">
+                            <i class="fas fa-history"></i> 庆祝记录
+                        </h3>
+                        <div id="celebrationHistory" style="
+                            max-height: 200px;
+                            overflow-y: auto;
+                            padding: 15px;
+                            background: #f0fdf4;
+                            border-radius: 10px;
+                            font-size: 0.9rem;
+                        ">
+                            <div style="text-align: center; color: #9ca3af; padding: 20px;">
+                                <i class="fas fa-gift"></i> 里程碑庆祝记录将在这里显示
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// 全局状态
+let readingState = {
+    currentStudent: 0,
+    isReading: false,
+    audioContext: null,
+    analyser: null,
+    microphone: null,
+    animationId: null,
+    currentVolume: 0,
+    readingStartTime: 0,
+    readingDuration: 0,
+    studentScores: [0, 0, 0, 0],
+    milestoneAchievements: {
+        300: false,
+        400: false,
+        500: false,
+        600: false
+    },
+    lastMilestone: 0,
+    encouragementHistory: []
+};
+
+// 学生信息
+const students = [
+    { name: "朗读之星", color: "#ef4444", avatar: "🧑‍🎓" },
+    { name: "语音达人", color: "#3b82f6", avatar: "👩‍🎓" },
+    { name: "发音高手", color: "#10b981", avatar: "👨‍🎓" },
+    { name: "朗读大师", color: "#8b5cf6", avatar: "👩‍🎓" }
+];
+
+// 里程碑配置
+const milestones = [
+    { score: 300, icon: "👏", title: "300分成就", sound: "applause", message: "热烈掌声！达到300分里程碑！" },
+    { score: 400, icon: "🎉", title: "400分成就", sound: "cheer", message: "欢呼喝彩！达到400分里程碑！" },
+    { score: 500, icon: "🎆", title: "500分成就", sound: "fireworks", message: "烟花庆典！达到500分里程碑！" },
+    { score: 600, icon: "🏆", title: "600分成就", sound: "victory", message: "全屏庆祝！达到600分里程碑！" }
+];
+
+// 表情激励配置（300分以上每100分一个等级）
+const milestoneExpressions = [
+    { score: 300, emojis: ["😊", "😄", "😁", "🥳"], motivations: ["加油！继续前进！", "太棒了！保持这个节奏！"] },
+    { score: 400, emojis: ["🤩", "🥰", "😍", "😎"], motivations: ["太优秀了！", "你是最棒的！"] },
+    { score: 500, emojis: ["🔥", "✨", "🌟", "💫"], motivations: ["不可思议的进步！", "让人惊叹的表现！"] },
+    { score: 600, emojis: ["👑", "🏅", "🎖️", "🥇"], motivations: ["朗读大师！", "冠军级表现！"] }
+];
+
+// 音效系统
+const soundSystem = {
+    applause: () => {
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        for (let i = 0; i < 120; i++) {
+            setTimeout(() => {
+                const osc = ac.createOscillator();
+                const gain = ac.createGain();
+                osc.connect(gain);
+                gain.connect(ac.destination);
+
+                osc.frequency.value = 200 + Math.random() * 600;
+                osc.type = ['sine', 'square'][Math.floor(Math.random() * 2)];
+
+                gain.gain.setValueAtTime(0, ac.currentTime);
+                gain.gain.linearRampToValueAtTime(0.08, ac.currentTime + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.4 + Math.random() * 0.4);
+
+                osc.start(ac.currentTime);
+                osc.stop(ac.currentTime + 0.8 + Math.random() * 0.4);
+            }, i * 8);
+        }
+    },
+
+    cheer: () => {
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        for (let i = 0; i < 30; i++) {
+            setTimeout(() => {
+                const osc = ac.createOscillator();
+                const gain = ac.createGain();
+                osc.connect(gain);
+                gain.connect(ac.destination);
+
+                osc.frequency.value = 300 + Math.random() * 500;
+                osc.type = 'sine';
+
+                gain.gain.setValueAtTime(0, ac.currentTime);
+                gain.gain.linearRampToValueAtTime(0.15, ac.currentTime + 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.6);
+
+                osc.start(ac.currentTime);
+                osc.stop(ac.currentTime + 0.6);
+            }, i * 50);
+        }
+    },
+
+    fireworks: () => {
+        createFireworksEffect();
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        for (let i = 0; i < 12; i++) {
+            setTimeout(() => {
+                const osc = ac.createOscillator();
+                const gain = ac.createGain();
+                osc.connect(gain);
+                gain.connect(ac.destination);
+
+                osc.frequency.value = 700;
+                osc.type = 'sawtooth';
+
+                gain.gain.setValueAtTime(0, ac.currentTime);
+                gain.gain.linearRampToValueAtTime(0.3, ac.currentTime + 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 1.2);
+
+                osc.frequency.exponentialRampToValueAtTime(100, ac.currentTime + 1.2);
+
+                osc.start(ac.currentTime);
+                osc.stop(ac.currentTime + 1.2);
+            }, i * 100);
+        }
+    },
+
+    victory: () => {
+        createVictoryEffect();
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        const victoryNotes = [
+            { freq: 523.25, time: 0 },
+            { freq: 587.33, time: 200 },
+            { freq: 659.25, time: 400 },
+            { freq: 698.46, time: 600 },
+            { freq: 783.99, time: 800 },
+            { freq: 880.00, time: 1000 },
+            { freq: 987.77, time: 1200 },
+            { freq: 1046.50, time: 1400 }
+        ];
+
+        victoryNotes.forEach(note => {
+            setTimeout(() => {
+                const osc = ac.createOscillator();
+                const gain = ac.createGain();
+                osc.connect(gain);
+                gain.connect(ac.destination);
+
+                osc.frequency.value = note.freq;
+                osc.type = 'triangle';
+
+                gain.gain.setValueAtTime(0, ac.currentTime);
+                gain.gain.linearRampToValueAtTime(0.25, ac.currentTime + 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.5);
+
+                osc.start(ac.currentTime);
+                osc.stop(ac.currentTime + 0.5);
+            }, note.time);
+        });
+    },
+
+    scoreTick: () => {
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.connect(gain);
+        gain.connect(ac.destination);
+
+        osc.frequency.value = 800;
+        osc.type = 'sine';
+
+        gain.gain.setValueAtTime(0, ac.currentTime);
+        gain.gain.linearRampToValueAtTime(0.1, ac.currentTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.1);
+
+        osc.start(ac.currentTime);
+        osc.stop(ac.currentTime + 0.1);
+    },
+
+    bubblePop: () => {
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.connect(gain);
+        gain.connect(ac.destination);
+
+        osc.frequency.value = 600;
+        osc.type = 'sine';
+
+        gain.gain.setValueAtTime(0, ac.currentTime);
+        gain.gain.linearRampToValueAtTime(0.2, ac.currentTime + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.2);
+
+        osc.frequency.exponentialRampToValueAtTime(200, ac.currentTime + 0.2);
+
+        osc.start(ac.currentTime);
+        osc.stop(ac.currentTime + 0.2);
+    }
+};
+
+// 选择学生
+function selectStudent(index) {
+    if (readingState.isReading) return;
+
+    readingState.currentStudent = index;
+
+    // 更新学生卡片
+    document.querySelectorAll('.student-card').forEach((card, i) => {
+        card.classList.toggle('active', i === index);
+    });
+
+    // 更新学生状态
+    updateStudentStatus();
+
+    // 更新分数显示
+    updateScoreDisplay();
+
+    // 更新气泡颜色
+    updateBubbleColor();
+
+    showEncouragement(`${students[index].name}，准备开始朗读！`);
+}
+
+// 开始朗读
+async function startReading() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        readingState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        readingState.analyser = readingState.audioContext.createAnalyser();
+        readingState.microphone = readingState.audioContext.createMediaStreamSource(stream);
+
+        readingState.microphone.connect(readingState.analyser);
+        readingState.analyser.fftSize = 512;
+        readingState.isReading = true;
+        readingState.readingStartTime = Date.now();
+
+        // 更新UI状态
+        document.getElementById('startReading').disabled = true;
+        document.getElementById('stopReading').disabled = false;
+        document.getElementById('energyHalo').style.display = 'block';
+        document.getElementById('milestoneIndicator').style.display = 'none';
+
+        // 开始动画循环
+        readingLoop();
+
+        showEncouragement(`${students[readingState.currentStudent].name}开始朗读！加油！`);
+
+        // 添加朗读记录
+        addCelebrationRecord(`${students[readingState.currentStudent].name}开始朗读`);
+
+    } catch (error) {
+        showEncouragement("无法访问麦克风，请检查权限设置。");
+    }
+}
+
+// 朗读主循环
+function readingLoop() {
+    if (!readingState.isReading) return;
+
+    const bufferLength = readingState.analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    readingState.analyser.getByteFrequencyData(dataArray);
+
+    // 计算音量
+    let sum = 0;
+    for (let i = 0; i < bufferLength; i++) {
+        sum += dataArray[i];
+    }
+    let volume = Math.min(100, (sum / bufferLength / 128) * 100);
+
+    // 更新状态
+    readingState.currentVolume = volume;
+    readingState.readingDuration = Date.now() - readingState.readingStartTime;
+
+    // 根据音量增加分数
+    updateScoreByVolume(volume);
+
+    // 更新UI
+    updateBubbleAppearance(volume);
+    updateMilestoneProgress();
+    checkMilestoneAchievements();
+    provideAutoEncouragement(volume);
+
+    // 继续循环
+    readingState.animationId = requestAnimationFrame(readingLoop);
+}
+
+// 根据音量增加分数
+function updateScoreByVolume(volume) {
+    if (volume > 20) {
+        // 基础分数增长
+        let baseIncrement = Math.floor(volume / 15);
+
+        // 音量越大，增长越快
+        if (volume > 60) baseIncrement *= 2;
+        if (volume > 80) baseIncrement *= 3;
+
+        // 300分以上额外加成
+        const currentScore = readingState.studentScores[readingState.currentStudent];
+        if (currentScore >= 300) {
+            baseIncrement *= 2; // 300分以上分数翻倍
+        }
+
+        readingState.studentScores[readingState.currentStudent] += baseIncrement;
+
+        // 播放分数增长音效
+        if (baseIncrement >= 5 && Math.random() < 0.3) {
+            soundSystem.scoreTick();
+        }
+
+        // 更新显示
+        updateScoreDisplay();
+
+        // 更新总分
+        updateTotalScore();
+    }
+}
+
+// 更新气泡外观
+function updateBubbleAppearance(volume) {
+    const bubble = document.getElementById('readingBubble');
+    const emoji = document.getElementById('bubbleEmoji');
+    const motivation = document.getElementById('bubbleMotivation');
+
+    // 气泡大小（1-2.5倍）
+    const scale = 1 + (volume / 60);
+    bubble.style.transform = `scale(${scale})`;
+
+    // 气泡颜色
+    const currentScore = readingState.studentScores[readingState.currentStudent];
+    let baseColor = students[readingState.currentStudent].color;
+
+    if (currentScore >= 600) {
+        baseColor = "#ec4899";
+    } else if (currentScore >= 500) {
+        baseColor = "#8b5cf6";
+    } else if (currentScore >= 400) {
+        baseColor = "#ef4444";
+    } else if (currentScore >= 300) {
+        baseColor = "#f59e0b";
+    }
+
+    // 根据分数调整颜色亮度
+    const scoreBrightness = Math.min(50, Math.floor(currentScore / 20));
+    const adjustedColor = adjustColorBrightness(baseColor, scoreBrightness);
+
+    bubble.style.background = `radial-gradient(circle at 30% 30%, 
+        ${adjustedColor}, 
+        ${adjustColorBrightness(adjustedColor, -20)})`;
+
+    // 气泡阴影
+    bubble.style.boxShadow = `
+        inset 0 -25px 50px rgba(0, 0, 0, 0.3),
+        inset 0 25px 50px rgba(255, 255, 255, 0.4),
+        0 0 ${40 + volume * 0.6}px ${adjustedColor.replace(')', ', 0.6)').replace('rgb', 'rgba')}
+    `;
+
+    // 更新表情和鼓励语
+    updateBubbleExpression(currentScore, volume, emoji, motivation);
+
+    // 光环动画速度
+    const halo = document.getElementById('energyHalo');
+    halo.style.animationDuration = `${1.5 - (volume / 100)}s`;
+}
+
+// 更新气泡表情和鼓励语
+function updateBubbleExpression(score, volume, emojiElement, motivationElement) {
+    let targetEmoji = "🎤";
+    let targetMotivation = "准备开始朗读";
+
+    if (score >= 600) {
+        // 600分以上：全屏庆祝级表情
+        const expressions = milestoneExpressions[3].emojis;
+        const motivations = milestoneExpressions[3].motivations;
+        targetEmoji = expressions[Math.floor((score - 600) / 25) % expressions.length];
+        targetMotivation = motivations[Math.floor((score - 600) / 50) % motivations.length];
+    } else if (score >= 500) {
+        // 500-599分：烟花庆典级表情
+        const expressions = milestoneExpressions[2].emojis;
+        const motivations = milestoneExpressions[2].motivations;
+        targetEmoji = expressions[Math.floor((score - 500) / 25) % expressions.length];
+        targetMotivation = motivations[Math.floor((score - 500) / 33) % motivations.length];
+    } else if (score >= 400) {
+        // 400-499分：欢呼喝彩级表情
+        const expressions = milestoneExpressions[1].emojis;
+        const motivations = milestoneExpressions[1].motivations;
+        targetEmoji = expressions[Math.floor((score - 400) / 25) % expressions.length];
+        targetMotivation = motivations[Math.floor((score - 400) / 33) % motivations.length];
+    } else if (score >= 300) {
+        // 300-399分：掌声鼓励级表情
+        const expressions = milestoneExpressions[0].emojis;
+        const motivations = milestoneExpressions[0].motivations;
+        targetEmoji = expressions[Math.floor((score - 300) / 25) % expressions.length];
+        targetMotivation = motivations[Math.floor((score - 300) / 33) % motivations.length];
+    } else if (score >= 200) {
+        // 200-299分：积极进步
+        const emojis = ["😊", "🙂", "🤗", "👍"];
+        const motivations = ["进步很大！", "继续努力！", "越来越好了！", "加油加油！"];
+        targetEmoji = emojis[Math.floor(score / 50) % emojis.length];
+        targetMotivation = motivations[Math.floor(score / 66) % motivations.length];
+    } else if (score >= 100) {
+        // 100-199分：基础鼓励
+        const emojis = ["🙂", "👏", "💪", "✨"];
+        const motivations = ["不错！", "继续加油！", "声音很清晰！", "读得真好！"];
+        targetEmoji = emojis[Math.floor(score / 50) % emojis.length];
+        targetMotivation = motivations[Math.floor(score / 66) % motivations.length];
+    } else if (score > 0) {
+        // 1-99分：入门鼓励
+        const emojis = ["👂", "🗣️", "💬", "📢"];
+        const motivations = ["开始吧！", "大声一点！", "你可以的！", "勇敢读出来！"];
+        targetEmoji = emojis[Math.floor(score / 25) % emojis.length];
+        targetMotivation = motivations[Math.floor(score / 33) % motivations.length];
+    }
+
+    // 根据音量微调表情
+    if (volume > 80) {
+        targetEmoji = addVolumeEffect(targetEmoji);
+    }
+
+    // 更新显示
+    if (emojiElement.textContent !== targetEmoji) {
+        emojiElement.textContent = targetEmoji;
+        emojiElement.classList.add('emoji-celebration');
+        setTimeout(() => {
+            emojiElement.classList.remove('emoji-celebration');
+        }, 800);
+    }
+
+    motivationElement.textContent = targetMotivation;
+}
+
+// 为表情添加音量效果
+function addVolumeEffect(emoji) {
+    const volumeEffects = {
+        "😊": "😄", "😄": "😁", "😁": "🤩",
+        "🙂": "😊", "👍": "👏", "👏": "🙌",
+        "💪": "🔥", "✨": "🌟", "🌟": "💫",
+        "🗣️": "📢", "📢": "🔊", "🔊": "🎺"
+    };
+    return volumeEffects[emoji] || emoji;
+}
+
+// 调整颜色亮度
+function adjustColorBrightness(color, amount) {
+    const hex = color.replace('#', '');
+    const num = parseInt(hex, 16);
+
+    let r = (num >> 16) + amount;
+    let g = ((num >> 8) & 0x00FF) + amount;
+    let b = (num & 0x0000FF) + amount;
+
+    r = Math.min(Math.max(r, 0), 255);
+    g = Math.min(Math.max(g, 0), 255);
+    b = Math.min(Math.max(b, 0), 255);
+
+    return `#${(r << 16 | g << 8 | b).toString(16).padStart(6, '0')}`;
+}
+
+// 更新里程碑进度
+function updateMilestoneProgress() {
+    const currentScore = readingState.studentScores[readingState.currentStudent];
+    const progress = Math.min(100, (currentScore / 600) * 100);
+
+    document.getElementById('milestoneFill').style.width = progress + '%';
+    document.getElementById('currentMilestone').textContent = currentScore + '/600分';
+
+    // 更新下一个里程碑提示
+    for (let i = milestones.length - 1; i >= 0; i--) {
+        if (currentScore < milestones[i].score) {
+            const nextScore = milestones[i].score;
+            document.getElementById('nextMilestone').innerHTML = 
+                `下一个里程碑: <span style="font-weight: bold;">${nextScore}分</span>`;
+            break;
+        }
+    }
+}
+
+// 检查里程碑成就
+function checkMilestoneAchievements() {
+    const currentScore = readingState.studentScores[readingState.currentStudent];
+
+    // 检查每个里程碑
+    for (const milestone of milestones) {
+        if (currentScore >= milestone.score && !readingState.milestoneAchievements[milestone.score]) {
+            // 达成里程碑
+            celebrateMilestone(milestone);
+            readingState.milestoneAchievements[milestone.score] = true;
+            readingState.lastMilestone = milestone.score;
+
+            // 更新成就显示
+            updateAchievementDisplay(milestone.score);
+
+            // 添加庆祝记录
+            addCelebrationRecord(`${students[readingState.currentStudent].name}达成${milestone.score}分里程碑！`);
+
+            // 300分以上，每满100分都有庆祝
+            if (milestone.score >= 300) {
+                createHundredPointCelebration(milestone.score);
+            }
+        }
+    }
+}
+
+// 庆祝里程碑
+function celebrateMilestone(milestone) {
+    // 播放对应音效
+    soundSystem[milestone.sound]();
+
+    // 显示里程碑指示器
+    const indicator = document.getElementById('milestoneIndicator');
+    const text = document.getElementById('milestoneText');
+
+    text.textContent = milestone.score + '分';
+    indicator.style.display = 'block';
+    indicator.style.background = `linear-gradient(135deg, ${students[readingState.currentStudent].color}, ${adjustColorBrightness(students[readingState.currentStudent].color, 50)})`;
+
+    // 3秒后隐藏
+    setTimeout(() => {
+        indicator.style.display = 'none';
+    }, 3000);
+
+    // 显示庆祝消息
+    showEncouragement(milestone.message);
+
+    // 创建庆祝特效
+    createMilestoneCelebration(milestone.score);
+}
+
+// 创建百分庆祝（300分以上每满100分）
+function createHundredPointCelebration(score) {
+    const currentScore = readingState.studentScores[readingState.currentStudent];
+
+    // 检查是否达到100的整数倍（300以上）
+    if (currentScore >= 300 && currentScore % 100 === 0 && currentScore !== readingState.lastMilestone) {
+        const celebrationMessages = [
+            `🎯 太棒了！达到${currentScore}分！`,
+            `🌟 第${currentScore/100}个100分达成！`,
+            `💯 完美！${currentScore}分里程碑！`,
+            `🏆 突破${currentScore}分大关！`
+        ];
+
+        const randomMessage = celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)];
+        showEncouragement(randomMessage);
+
+        // 播放庆祝音效
+        soundSystem.bubblePop();
+
+        // 创建飘动奖励
+        createFloatingReward(currentScore);
+
+        readingState.lastMilestone = currentScore;
+    }
+}
+
+// 提供自动鼓励
+function provideAutoEncouragement(volume) {
+    const now = Date.now();
+    const timeSinceLast = now - (readingState.lastEncouragementTime || 0);
+
+    if (timeSinceLast > 5000) { // 每5秒最多一次
+        const currentScore = readingState.studentScores[readingState.currentStudent];
+
+        if (volume > 85) {
+            const highVolumeMessages = [
+                "音量太棒了！继续保持！🔊",
+                "声音洪亮有力！太优秀了！🎤",
+                "这个音量太给力了！继续冲！💥"
+            ];
+            showEncouragement(highVolumeMessages[Math.floor(Math.random() * highVolumeMessages.length)]);
+            readingState.lastEncouragementTime = now;
+        } else if (currentScore >= 300 && volume > 70 && Math.random() < 0.3) {
+            const milestoneMessages = [
+                "300分以上了！每100分都有庆祝！🎯",
+                "继续加油！下一个100分在等你！💪",
+                "太厉害了！分数还在不断上涨！🚀"
+            ];
+            showEncouragement(milestoneMessages[Math.floor(Math.random() * milestoneMessages.length)]);
+            readingState.lastEncouragementTime = now;
+        }
+    }
+}
+
+// 更新成就显示
+function updateAchievementDisplay(score) {
+    const achievementElement = document.getElementById(`milestone${score}`);
+    if (achievementElement) {
+        achievementElement.style.opacity = '1';
+        achievementElement.style.transform = 'scale(1.2)';
+        achievementElement.style.transition = 'all 0.3s';
+
+        setTimeout(() => {
+            achievementElement.style.transform = 'scale(1)';
+        }, 300);
+    }
+}
+
+// 更新分数显示
+function updateScoreDisplay() {
+    const currentScore = readingState.studentScores[readingState.currentStudent];
+
+    // 更新当前学生分数
+    document.getElementById('currentScore').textContent = currentScore;
+    document.getElementById('currentScore').classList.add('score-jump');
+    setTimeout(() => {
+        document.getElementById('currentScore').classList.remove('score-jump');
+    }, 500);
+
+    // 更新学生列表中的分数
+    document.getElementById(`score${readingState.currentStudent + 1}`).textContent = currentScore;
+
+    // 更新学生状态
+    updateStudentStatus();
+
+    // 更新学生名字颜色（根据分数等级）
+    updateStudentLevelColor();
+}
+
+// 更新学生状态
+function updateStudentStatus() {
+    const currentScore = readingState.studentScores[readingState.currentStudent];
+    let status = "准备开始朗读";
+
+    if (currentScore >= 600) {
+        status = "朗读大师！🏆";
+    } else if (currentScore >= 500) {
+        status = "接近满分！🎆";
+    } else if (currentScore >= 400) {
+        status = "非常优秀！🎉";
+    } else if (currentScore >= 300) {
+        status = "继续加油！👏";
+    } else if (currentScore >= 200) {
+        status = "进步很大！✨";
+    } else if (currentScore >= 100) {
+        status = "继续努力！💪";
+    } else if (currentScore > 0) {
+        status = "正在朗读中...";
+    }
+
+    document.getElementById(`studentStatus${readingState.currentStudent + 1}`).textContent = status;
+}
+
+// 更新学生等级颜色
+function updateStudentLevelColor() {
+    const currentScore = readingState.studentScores[readingState.currentStudent];
+    const studentNameElement = document.getElementById(`studentName${readingState.currentStudent + 1}`);
+
+    // 移除所有等级类
+    studentNameElement.classList.remove('level-0', 'level-100', 'level-200', 'level-300', 'level-400', 'level-500', 'level-600');
+
+    // 添加对应等级类
+    if (currentScore >= 600) {
+        studentNameElement.classList.add('level-600');
+    } else if (currentScore >= 500) {
+        studentNameElement.classList.add('level-500');
+    } else if (currentScore >= 400) {
+        studentNameElement.classList.add('level-400');
+    } else if (currentScore >= 300) {
+        studentNameElement.classList.add('level-300');
+    } else if (currentScore >= 200) {
+        studentNameElement.classList.add('level-200');
+    } else if (currentScore >= 100) {
+        studentNameElement.classList.add('level-100');
+    } else {
+        studentNameElement.classList.add('level-0');
+    }
+}
+
+// 更新总分
+function updateTotalScore() {
+    const totalScore = readingState.studentScores.reduce((a, b) => a + b, 0);
+    document.getElementById('totalScore').textContent = totalScore;
+}
+
+// 停止朗读
+function stopReading() {
+    if (!readingState.isReading) return;
+
+    readingState.isReading = false;
+
+    // 停止音频处理
+    if (readingState.audioContext) {
+        readingState.audioContext.close();
+    }
+
+    // 停止动画
+    if (readingState.animationId) {
+        cancelAnimationFrame(readingState.animationId);
+    }
+
+    // 更新UI状态
+    document.getElementById('startReading').disabled = false;
+    document.getElementById('stopReading').disabled = true;
+    document.getElementById('energyHalo').style.display = 'none';
+
+    // 重置气泡大小
+    document.getElementById('readingBubble').style.transform = 'scale(1)';
+    updateBubbleColor();
+
+    // 显示朗读结果
+    const finalScore = readingState.studentScores[readingState.currentStudent];
+    const duration = Math.floor(readingState.readingDuration / 1000);
+
+    let resultMessage = `${students[readingState.currentStudent].name}朗读结束！得分: ${finalScore}，时长: ${duration}秒`;
+
+    if (finalScore >= 300) {
+        resultMessage += `，达成${Math.floor(finalScore/100)*100}分里程碑！`;
+    }
+
+    showEncouragement(resultMessage);
+
+    // 添加朗读记录
+    addCelebrationRecord(`${students[readingState.currentStudent].name}结束朗读，得分: ${finalScore}`);
+}
+
+// 分数归零
+function resetAllScores() {
+    if (readingState.isReading) {
+        stopReading();
+    }
+
+    if (!confirm("确定要重置所有分数吗？所有学生的分数和成就都将归零！")) {
+        return;
+    }
+
+    // 播放重置音效
+    soundSystem.victory();
+
+    // 重置所有分数和成就
+    readingState.studentScores = [0, 0, 0, 0];
+    readingState.milestoneAchievements = { 300: false, 400: false, 500: false, 600: false };
+    readingState.lastMilestone = 0;
+    readingState.encouragementHistory = [];
+
+    // 更新UI
+    for (let i = 1; i <= 4; i++) {
+        document.getElementById(`score${i}`).textContent = "0";
+        document.getElementById(`studentStatus${i}`).textContent = i === 1 ? "准备开始朗读..." : "等待轮次...";
+        document.getElementById(`studentName${i}`).className = "level-0";
+    }
+
+    document.getElementById('currentScore').textContent = "0";
+    document.getElementById('milestoneFill').style.width = "0%";
+    document.getElementById('currentMilestone').textContent = "0/600分";
+    document.getElementById('nextMilestone').innerHTML = `下一个里程碑: <span style="font-weight: bold;">300分</span>`;
+
+    // 重置成就显示
+    for (const milestone of milestones) {
+        const element = document.getElementById(`milestone${milestone.score}`);
+        if (element) {
+            element.style.opacity = "0.3";
+            element.style.transform = "scale(1)";
+        }
+    }
+
+    // 更新总分
+    updateTotalScore();
+
+    // 清空庆祝记录
+    document.getElementById('celebrationHistory').innerHTML = `
+        <div style="text-align: center; color: #9ca3af; padding: 20px;">
+            <i class="fas fa-gift"></i> 里程碑庆祝记录将在这里显示
+        </div>
+    `;
+
+    // 重置气泡
+    updateBubbleColor();
+    document.getElementById('bubbleEmoji').textContent = "🎤";
+    document.getElementById('bubbleMotivation').textContent = "准备开始朗读";
+
+    showEncouragement("所有分数已重置！开始新的挑战吧！");
+
+    // 添加重置记录
+    addCelebrationRecord("系统重置：所有分数归零，开始新挑战！");
+
+    // 创建重置特效
+    createResetCelebration();
+}
+
+// 显示鼓励信息
+function showEncouragement(message) {
+    const feed = document.getElementById('encouragementFeed');
+    const messageElement = document.getElementById('encouragementMessage');
+
+    messageElement.innerHTML = `<i class="fas fa-comment-alt"></i> ${message}`;
+
+    // 随机背景颜色
+    const colors = [
+        'linear-gradient(135deg, #f0f9ff, #e0f2fe)',
+        'linear-gradient(135deg, #fef3c7, #fde68a)',
+        'linear-gradient(135deg, #dcfce7, #bbf7d0)',
+        'linear-gradient(135deg, #fce7f3, #fbcfe8)',
+        'linear-gradient(135deg, #ede9fe, #ddd6fe)'
+    ];
+    feed.style.background = colors[Math.floor(Math.random() * colors.length)];
+
+    // 添加动画效果
+    feed.classList.add('emoji-celebration');
+    setTimeout(() => {
+        feed.classList.remove('emoji-celebration');
+    }, 800);
+}
+
+// 添加庆祝记录
+function addCelebrationRecord(message) {
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+
+    const historyDiv = document.getElementById('celebrationHistory');
+    const entry = document.createElement('div');
+    entry.style.cssText = `
+        padding: 10px 15px;
+        margin-bottom: 10px;
+        background: white;
+        border-radius: 10px;
+        border-left: 5px solid ${students[readingState.currentStudent].color};
+        font-size: 0.9rem;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    `;
+    entry.innerHTML = `<span style="color: #6b7280; font-weight: bold;">[${timeStr}]</span> ${message}`;
+
+    historyDiv.insertBefore(entry, historyDiv.firstChild);
+
+    // 限制记录数量
+    if (historyDiv.children.length > 10) {
+        historyDiv.removeChild(historyDiv.lastChild);
+    }
+}
+
+// 更新气泡颜色
+function updateBubbleColor() {
+    const student = students[readingState.currentStudent];
+    const bubble = document.getElementById('readingBubble');
+
+    bubble.style.background = `radial-gradient(circle at 30% 30%, ${student.color}, ${adjustColorBrightness(student.color, -20)})`;
+}
+
+// 创建烟花特效
+function createFireworksEffect() {
+    for (let i = 0; i < 80; i++) {
+        setTimeout(() => {
+            const firework = document.createElement('div');
+            firework.className = 'confetti-burst';
+            firework.style.backgroundColor = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'][Math.floor(Math.random() * 6)];
+            firework.style.left = Math.random() * 100 + '%';
+            firework.style.top = Math.random() * 100 + '%';
+
+            document.body.appendChild(firework);
+
+            let size = Math.random() * 20 + 8;
+            let x = Math.random() * 40 - 20;
+            let y = Math.random() * 40 - 20;
+            let opacity = 1;
+
+            const animate = () => {
+                size *= 0.92;
+                x *= 0.95;
+                y *= 0.95;
+                opacity -= 0.02;
+
+                firework.style.width = size + 'px';
+                firework.style.height = size + 'px';
+                firework.style.transform = `translate(${x}px, ${y}px)`;
+                firework.style.opacity = opacity;
+
+                if (opacity > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    firework.remove();
+                }
+            };
+
+            animate();
+        }, i * 40);
+    }
+}
+
+// 创建胜利特效
+function createVictoryEffect() {
+    for (let i = 0; i < 30; i++) {
+        setTimeout(() => {
+            const celebration = document.createElement('div');
+            celebration.className = 'milestone-celebration';
+            celebration.innerHTML = ['🏆', '🎖️', '🥇', '👑', '💎', '⭐'][Math.floor(Math.random() * 6)];
+            celebration.style.left = Math.random() * 80 + 10 + '%';
+            celebration.style.top = '100%';
+            celebration.style.color = ['#f59e0b', '#ef4444', '#8b5cf6'][Math.floor(Math.random() * 3)];
+
+            document.body.appendChild(celebration);
+        }, i * 100);
+    }
+}
+
+// 创建里程碑庆祝
+function createMilestoneCelebration(score) {
+    const emojis = {
+        300: ["👏", "🙌", "🤝", "👍"],
+        400: ["🎉", "🎊", "🥳", "🎈"],
+        500: ["🎆", "✨", "🌟", "💫"],
+        600: ["🏆", "🎖️", "🥇", "👑"]
+    };
+
+    const emojiSet = emojis[score] || ["🎯"];
+
+    for (let i = 0; i < 20; i++) {
+        setTimeout(() => {
+            const reward = document.createElement('div');
+            reward.className = 'floating-reward';
+            reward.innerHTML = emojiSet[Math.floor(Math.random() * emojiSet.length)];
+            reward.style.left = Math.random() * 80 + 10 + '%';
+            reward.style.top = '80%';
+            reward.style.color = students[readingState.currentStudent].color;
+
+            document.querySelector('.smart-bubble-area').appendChild(reward);
+        }, i * 150);
+    }
+}
+
+// 创建飘动奖励
+function createFloatingReward(score) {
+    const rewardEmojis = ["💯", "🎯", "✨", "🌟", "⭐", "💫", "🔥", "💪"];
+
+    for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+            const reward = document.createElement('div');
+            reward.className = 'floating-reward';
+            reward.innerHTML = rewardEmojis[Math.floor(Math.random() * rewardEmojis.length)];
+            reward.style.left = Math.random() * 80 + 10 + '%';
+            reward.style.top = '80%';
+            reward.style.color = score >= 500 ? '#8b5cf6' : 
+                                score >= 400 ? '#ef4444' : 
+                                score >= 300 ? '#f59e0b' : '#3b82f6';
+
+            document.querySelector('.smart-bubble-area').appendChild(reward);
+        }, i * 300);
+    }
+}
+
+// 创建重置庆祝
+function createResetCelebration() {
+    for (let i = 0; i < 15; i++) {
+        setTimeout(() => {
+            const particle = document.createElement('div');
+            particle.style.cssText = `
+                position: absolute;
+                width: 12px;
+                height: 12px;
+                background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+                border-radius: 50%;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 5;
+            `;
+
+            document.querySelector('.smart-bubble-area').appendChild(particle);
+
+            let angle = Math.random() * Math.PI * 2;
+            let distance = Math.random() * 150 + 80;
+            let duration = Math.random() * 800 + 400;
+            let opacity = 1;
+
+            const startTime = Date.now();
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = elapsed / duration;
+
+                if (progress < 1) {
+                    const currentDistance = distance * progress;
+                    const x = Math.cos(angle) * currentDistance;
+                    const y = Math.sin(angle) * currentDistance;
+                    opacity = 1 - progress;
+
+                    particle.style.transform = `translate(${x}px, ${y}px)`;
+                    particle.style.opacity = opacity;
+
+                    requestAnimationFrame(animate);
+                } else {
+                    particle.remove();
+                }
+            };
+
+            animate();
+        }, i * 50);
+    }
+}
+
+// 初始化里程碑标记
+function initMilestoneMarkers() {
+    const markersContainer = document.getElementById('milestoneMarkers');
+    markersContainer.innerHTML = '';
+
+    for (let i = 1; i <= 6; i++) {
+        const score = i * 100;
+        const marker = document.createElement('div');
+        marker.className = 'milestone-marker';
+        marker.style.left = (score / 600 * 100) + '%';
+
+        const label = document.createElement('div');
+        label.className = 'milestone-label';
+        label.textContent = score + '分';
+        label.style.left = (score / 600 * 100) + '%';
+
+        markersContainer.appendChild(marker);
+        markersContainer.appendChild(label);
+    }
+}
+
+// 初始化
+document.addEventListener('DOMContentLoaded', () => {
+    selectStudent(0);
+    initMilestoneMarkers();
+
+    // 气泡点击事件
+    document.getElementById('readingBubble').addEventListener('click', () => {
+        if (readingState.isReading) {
+            // 点击气泡获得奖励
+            const bonus = 30;
+            readingState.studentScores[readingState.currentStudent] += bonus;
+            updateScoreDisplay();
+            soundSystem.bubblePop();
+
+            const currentScore = readingState.studentScores[readingState.currentStudent];
+            showEncouragement(`气泡能量！+${bonus}分奖励！当前总分: ${currentScore}`);
+            addCelebrationRecord(`${students[readingState.currentStudent].name}点击气泡获得${bonus}分奖励`);
+        }
+    });
+
+    // 键盘快捷键
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            if (readingState.isReading) {
+                stopReading();
+            } else {
+                startReading();
+            }
+        }
+
+        if (e.code >= 'Digit1' && e.code <= 'Digit4') {
+            const index = parseInt(e.code.slice(-1)) - 1;
+            if (index < students.length) {
+                selectStudent(index);
+            }
+        }
+
+        if (e.code === 'KeyR' && e.ctrlKey) {
+            resetAllScores();
+        }
+
+        if (e.code === 'Escape') {
+            if (readingState.isReading) {
+                stopReading();
+            }
+        }
+    });
+
+    // 初始化气泡颜色
+    updateBubbleColor();
+});
+</script>
+</body>
+</html>
