@@ -6,6 +6,7 @@
   <title>复习资料</title>
   <link rel="stylesheet" href="style.css">
   <style>
+<<<<<<< HEAD
     /* 原有样式不变，无需修改 */
     .image-item {
       display: inline-block; /* 让图片和文字整体排列，不独占一行 */
@@ -21,6 +22,23 @@
     }
     .rollcall-text:hover {
       color: #0066cc; /* 悬浮时变色，提升交互体验 */
+=======
+    /* 极简样式：确保点名文字在图片下方，点击区域最大化 */
+    .image-item {
+      display: inline-block;
+      margin-right: 20px;
+      text-align: center;
+    }
+    /* 点名文字样式：加大点击区域，确保易点击 */
+    .rollcall-link {
+      display: block; /* 整行可点，不局限于文字本身 */
+      margin-top: 8px; /* 与图片拉开距离，避免误点图片 */
+      color: #0066cc; /* 醒目颜色，方便识别可点击 */
+      font-size: 16px; /* 放大文字，更容易点中 */
+      cursor: pointer; /* 明确手型提示 */
+      text-decoration: none; /* 去除下划线 */
+      padding: 2px 10px; /* 增加内边距，扩大点击范围 */
+>>>>>>> ab9c8bdc37121b2313b4dd3bf6008e538395e821
     }
   </style>
 </head>
@@ -32,6 +50,7 @@
   <div class="images-container">
     <p>欢迎阅读本课的相关内容，以下展示了课本笔记以及相关的文章或图表。</p>
     <div id="lesson-content" class="chart">
+<<<<<<< HEAD
       <!-- 原有1.png（保持不变，保留弹窗功能） -->
       <div class="image-item">
         <img src="images/4/20/1.png" alt="历史图片 1">
@@ -47,13 +66,28 @@
         <img src="images/4/20/3.png" alt="历史图片 3">
         <!-- 课堂朗读文字：添加专属ID，方便JS绑定跳转事件，复用原有样式 -->
         <span class="rollcall-text" id="read-text">课堂朗读</span>
+=======
+      <!-- 原有1.png：保留弹窗功能 -->
+      <div class="image-item">
+        <img src="images/4/20/1.png" alt="历史图片 1">
+      </div>
+      <!-- 2.png + 点名文字：点击区域最大化，必触发跳转 -->
+      <div class="image-item">
+        <img src="images/4/20/2.png" alt="历史图片 2">
+        <!-- 核心：a标签直接作为点名文字，无嵌套，点击区域拉满 -->
+        <a href="点名.html" class="rollcall-link">点名</a>
+>>>>>>> ab9c8bdc37121b2313b4dd3bf6008e538395e821
       </div>
     </div>
     <div class="links">
       <a href="recite.pdf" class="link-button">背诵资料</a>
     </div>
   </div>
+<<<<<<< HEAD
   <!-- 原有图片弹窗结构（无需修改） -->
+=======
+  <!-- 原有图片弹窗：完整保留 -->
+>>>>>>> ab9c8bdc37121b2313b4dd3bf6008e538395e821
   <div class="image-popup" id="image-popup">
     <span class="close-popup" id="close-popup">×</span>
     <img id="popup-image" src="" alt="放大图片">
@@ -62,4 +96,8 @@
   </div>
   <script src="script.js"></script>
 </body>
+<<<<<<< HEAD
 </html>
+=======
+</html>
+>>>>>>> ab9c8bdc37121b2313b4dd3bf6008e538395e821
