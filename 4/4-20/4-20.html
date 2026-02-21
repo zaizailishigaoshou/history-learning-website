@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史课程 4-20</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>课程内容</h1>
+        <a href="#" class="exit-button">退出</a>
+    </header>
+
+    <div class="content">
+        <div class="gallery-row">
+            
+            <!-- 第一张图 -->
+            <div class="gallery-item">
+                <!-- 注意：路径改为了文件夹路径 -->
+                <img src="images/4/20/1.png" alt="图1" onclick="openModal(this)">
+                <a href="recite.pdf" class="link-button" target="_blank">复习</a>
+            </div>
+
+            <!-- 第二张图 -->
+            <div class="gallery-item">
+                <img src="images/4/20/2.png" alt="图2" onclick="openModal(this)">
+                <a href="点名.html" class="link-button">点名</a>
+            </div>
+
+            <!-- 第三张图 -->
+            <div class="gallery-item">
+                <img src="images/4/20/3.png" alt="图3" onclick="openModal(this)">
+                <a href="课堂朗读.html" class="link-button">课堂朗读</a>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 图片放大弹窗 -->
+    <div id="image-popup" class="image-popup">
+        <span id="close-popup" class="close-popup">&times;</span>
+        <button id="prev-button" class="nav-button prev-button">&#10094;</button>
+        <img id="popup-image" src="" alt="放大图片">
+        <button id="next-button" class="nav-button next-button">&#10095;</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
